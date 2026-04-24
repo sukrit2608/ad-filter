@@ -111,3 +111,7 @@ async def get_analytics():
         "total_ads_shown": total_shown,
         "top_filtered_apps": [{"app": row["app_package"], "count": row["count"]} for row in top_apps]
     }
+from fastapi.responses import FileResponse
+@app.get("/")
+def read_root():
+    return FileResponse("index.html")
