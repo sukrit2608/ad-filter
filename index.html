@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>adfilter — Stop showing ads to people who already have your app</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0A0E1A;
+      --surface:#111827;
+      --surface2:#1a2236;
+      --accent:#00E5A0;
+      --text:#F0F4FF;
+      --muted:#8892A4;
+      --border:rgba(255,255,255,0.08);
+    }
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6}
+    h1,h2,h3{font-family:'Syne',sans-serif}
+    .nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 2rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,14,26,0.95);backdrop-filter:blur(10px);z-index:10}
+    .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-0.02em}
+    .logo span{color:var(--accent)}
+    .nav-btn{background:var(--accent);color:#0A0E1A;border:none;padding:0.5rem 1.2rem;border-radius:6px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer}
+    .hero{padding:5rem 2rem 4rem;text-align:center;max-width:760px;margin:0 auto}
+    .badge{display:inline-block;background:rgba(0,229,160,0.1);color:var(--accent);border:1px solid rgba(0,229,160,0.3);padding:0.3rem 1rem;border-radius:20px;font-size:0.78rem;font-weight:500;letter-spacing:0.05em;margin-bottom:1.5rem}
+    .hero h1{font-size:clamp(2.2rem,5vw,3.4rem);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin-bottom:1.2rem}
+    .hero h1 em{font-style:normal;color:var(--accent)}
+    .hero p{font-size:1.05rem;color:var(--muted);max-width:560px;margin:0 auto 2rem}
+    .cta-row{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+    .btn-primary{background:var(--accent);color:#0A0E1A;border:none;padding:0.75rem 1.8rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer}
+    .btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border);padding:0.75rem 1.8rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:500;font-size:0.9rem;cursor:pointer}
+    .problem-strip{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:2.5rem 2rem}
+    .problem-inner{max-width:700px;margin:0 auto;text-align:center}
+    .problem-inner h2{font-size:1.3rem;font-weight:700;margin-bottom:0.8rem;letter-spacing:-0.01em}
+    .problem-inner p{color:var(--muted);font-size:0.95rem;max-width:560px;margin:0 auto}
+    .highlight-num{color:var(--accent);font-weight:700}
+    .section{padding:3rem 2rem;max-width:900px;margin:0 auto}
+    .section-tag{font-size:0.75rem;font-weight:500;letter-spacing:0.1em;color:var(--accent);text-transform:uppercase;margin-bottom:0.8rem}
+    .section h2{font-size:1.7rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.6rem}
+    .section p.sub{color:var(--muted);margin-bottom:2rem;max-width:560px}
+    .flow-diagram{margin:2rem 0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:2rem}
+    .flow-title{font-size:0.78rem;font-weight:500;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:1.5rem;text-align:center}
+    .flow-columns{display:grid;grid-template-columns:1fr 60px 1fr 60px 1fr;align-items:start}
+    .flow-col{display:flex;flex-direction:column;gap:0.75rem}
+    .flow-col-label{font-size:0.72rem;font-weight:500;color:var(--muted);text-align:center;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.5rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border)}
+    .flow-node{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;text-align:center}
+    .flow-node h4{font-size:0.82rem;font-weight:500;margin-bottom:0.2rem}
+    .flow-node p{font-size:0.72rem;color:var(--muted);margin:0}
+    .flow-node.accent{border-color:rgba(0,229,160,0.35);background:rgba(0,229,160,0.05)}
+    .flow-node.accent h4{color:var(--accent)}
+    .flow-node.bad{border-color:rgba(255,107,107,0.3);background:rgba(255,107,107,0.05)}
+    .flow-node.bad h4{color:#FF8080}
+    .flow-node.good{border-color:rgba(0,229,160,0.35);background:rgba(0,229,160,0.06)}
+    .flow-node.good h4{color:var(--accent)}
+    .flow-mid-box{background:rgba(0,102,255,0.1);border:1px solid rgba(0,102,255,0.3);border-radius:10px;padding:1rem;text-align:center;margin-top:1.5rem}
+    .flow-mid-box h4{font-size:0.85rem;font-weight:500;color:#4D9FFF;margin-bottom:0.25rem}
+    .flow-mid-box p{font-size:0.72rem;color:var(--muted);margin:0}
+    .flow-vs{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2.2rem}
+    .flow-vs-line{flex:1;width:1px;background:var(--border);min-height:20px}
+    .flow-vs-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);margin:3px 0}
+    .before-after{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:2rem 0}
+    .ba-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.3rem}
+    .ba-card.before{border-color:rgba(255,107,107,0.2)}
+    .ba-card.after{border-color:rgba(0,229,160,0.2)}
+    .ba-label{font-size:0.7rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.8rem}
+    .ba-card.before .ba-label{color:#FF8080}
+    .ba-card.after .ba-label{color:var(--accent)}
+    .ba-row{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;font-size:0.8rem}
+    .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .dot.red{background:#FF6B6B}
+    .dot.green{background:var(--accent)}
+    .dot.gray{background:var(--muted)}
+    .response-demo{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:2rem 0}
+    .resp-row{display:flex;justify-content:space-between;align-items:center;padding:0.8rem 1rem;border-radius:8px;margin-bottom:0.5rem;font-size:0.85rem}
+    .resp-row:last-child{margin-bottom:0}
+    .resp-row.filtered{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.15)}
+    .resp-row.shown{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.15)}
+    .resp-badge{font-size:0.72rem;font-weight:500;padding:0.2rem 0.7rem;border-radius:4px}
+    .resp-badge.no{background:rgba(255,107,107,0.15);color:#FF8080}
+    .resp-badge.yes{background:rgba(0,229,160,0.15);color:var(--accent)}
+    .resp-reason{font-size:0.72rem;color:var(--muted)}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1.5rem}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.3rem}
+    .card-icon{width:32px;height:32px;border-radius:8px;background:rgba(0,229,160,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;font-size:14px}
+    .card h3{font-size:0.9rem;font-weight:500;margin-bottom:0.4rem}
+    .card p{font-size:0.8rem;color:var(--muted);margin:0}
+    .cta-section{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:3rem 2rem;text-align:center;margin:2rem 0}
+    .cta-section h2{font-size:1.5rem;font-weight:800;margin-bottom:0.5rem}
+    .cta-section p{color:var(--muted);margin-bottom:1.5rem}
+    .url-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.7rem 1.2rem;display:inline-block;font-family:monospace;font-size:0.82rem;color:var(--accent);margin-bottom:1.5rem}
+    .footer{padding:1.5rem 2rem;text-align:center;color:var(--muted);font-size:0.78rem;border-top:1px solid var(--border)}
+    @media(max-width:600px){
+      .flow-columns{grid-template-columns:1fr}
+      .flow-vs{display:none}
+      .before-after{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="logo">ad<span>filter</span></div>
+  <button class="nav-btn" onclick="document.querySelector('.cta-section').scrollIntoView({behavior:'smooth'})">Get early access</button>
+</nav>
+
+<div class="hero">
+  <div class="badge">Ad Tech Infrastructure</div>
+  <h1>Stop showing ads to people who <em>already have</em> your app</h1>
+  <p>A backend API that checks whether a user has your app installed before showing them an install ad — so your budget only reaches people who might actually convert.</p>
+  <div class="cta-row">
+    <button class="btn-primary" onclick="window.open('https://web-production-b1e23.up.railway.app/docs','_blank')">Try the live API</button>
+    <button class="btn-secondary" onclick="document.querySelector('#how').scrollIntoView({behavior:'smooth'})">See how it works</button>
+  </div>
+</div>
+
+<div class="problem-strip">
+  <div class="problem-inner">
+    <h2>The problem is simple — and expensive</h2>
+    <p>When you run an app install campaign, a portion of the people seeing your ad <span class="highlight-num">already have your app</span>. They will never install it again. Every impression served to them is wasted spend. adfilter catches them before the ad is shown.</p>
+  </div>
+</div>
+
+<div class="section" id="how">
+  <div class="section-tag">How it works</div>
+  <h2>One API call. Smarter ad decisions.</h2>
+  <p class="sub">Before serving an app install ad, send a request to adfilter. We check instantly and tell you whether to show it or skip it.</p>
+
+  <div class="flow-diagram">
+    <div class="flow-title">End-to-end flow</div>
+    <div class="flow-columns">
+      <div class="flow-col">
+        <div class="flow-col-label">Ad network</div>
+        <div class="flow-node">
+          <h4>Campaign running</h4>
+          <p>App install ad is about to be served to a user</p>
+        </div>
+        <div class="flow-node" style="margin-top:0.75rem">
+          <h4>Sends filter request</h4>
+          <p>POST /filter with user_id + app_package name</p>
+        </div>
+        <div class="flow-node" style="margin-top:0.75rem">
+          <h4>Acts on decision</h4>
+          <p>Shows or skips the ad based on the response</p>
+        </div>
+      </div>
+      <div class="flow-vs">
+        <div class="flow-vs-line"></div>
+        <div class="flow-vs-dot"></div>
+        <div class="flow-vs-dot"></div>
+        <div class="flow-vs-dot"></div>
+        <div class="flow-vs-line"></div>
+      </div>
+      <div class="flow-col">
+        <div class="flow-col-label">adfilter API</div>
+        <div class="flow-mid-box">
+          <h4>Checks installed apps database</h4>
+          <p>Looks up whether this user has the advertised app already installed</p>
+        </div>
+        <div style="text-align:center;padding:0.6rem 0;color:var(--muted);font-size:0.8rem">↓ returns decision in &lt;10ms ↓</div>
+        <div class="flow-node accent">
+          <h4>Logs every decision</h4>
+          <p>Analytics track what was filtered vs shown over time</p>
+        </div>
+      </div>
+      <div class="flow-vs">
+        <div class="flow-vs-line"></div>
+        <div class="flow-vs-dot"></div>
+        <div class="flow-vs-dot"></div>
+        <div class="flow-vs-dot"></div>
+        <div class="flow-vs-line"></div>
+      </div>
+      <div class="flow-col">
+        <div class="flow-col-label">Outcome</div>
+        <div class="flow-node bad">
+          <h4>Ad blocked</h4>
+          <p>User already has the app — impression skipped, budget saved</p>
+        </div>
+        <div style="height:0.75rem"></div>
+        <div class="flow-node good">
+          <h4>Ad shown</h4>
+          <p>User doesn't have the app — a real potential install</p>
+        </div>
+        <div style="height:0.75rem"></div>
+        <div class="flow-node accent">
+          <h4>Better ROI</h4>
+          <p>Same budget, fewer wasted impressions, more real conversions</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-tag">Before vs after</div>
+  <h2>What changes when you use adfilter</h2>
+  <p class="sub">Consider a campaign targeting 100 users. Without any filtering, a significant number of them likely already have your app.</p>
+  <div class="before-after">
+    <div class="ba-card before">
+      <div class="ba-label">Without adfilter</div>
+      <div class="ba-row"><div class="dot red"></div><span>Existing users see the ad anyway</span></div>
+      <div class="ba-row"><div class="dot red"></div><span>Budget spent on zero-chance impressions</span></div>
+      <div class="ba-row"><div class="dot red"></div><span>Low install conversion rate</span></div>
+      <div class="ba-row"><div class="dot gray"></div><span>No visibility into how many were wasted</span></div>
+    </div>
+    <div class="ba-card after">
+      <div class="ba-label">With adfilter</div>
+      <div class="ba-row"><div class="dot green"></div><span>Existing users filtered out before impression</span></div>
+      <div class="ba-row"><div class="dot green"></div><span>Budget focused on non-users only</span></div>
+      <div class="ba-row"><div class="dot green"></div><span>Higher install conversion rate</span></div>
+      <div class="ba-row"><div class="dot green"></div><span>Full analytics on what was filtered and why</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-tag">Live demo</div>
+  <h2>See the API in action</h2>
+  <p class="sub">These are real responses from our live API — filtering decisions made in milliseconds.</p>
+  <div class="response-demo">
+    <div class="resp-row filtered">
+      <span>LinkedIn ad → user_123</span>
+      <span class="resp-reason">already installed</span>
+      <span class="resp-badge no">Block ad</span>
+    </div>
+    <div class="resp-row shown">
+      <span>Twitter ad → user_123</span>
+      <span class="resp-reason">not installed</span>
+      <span class="resp-badge yes">Show ad</span>
+    </div>
+    <div class="resp-row filtered">
+      <span>Instagram ad → user_123</span>
+      <span class="resp-reason">already installed</span>
+      <span class="resp-badge no">Block ad</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-tag">Features</div>
+  <h2>Built for ad networks and app developers</h2>
+  <p class="sub">Everything you need to stop wasting spend on the wrong audience.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Real-time filtering</h3>
+      <p>Filter decisions happen in under 10ms — fast enough for any ad serving pipeline.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>Analytics built in</h3>
+      <p>Every decision is logged. See total ads filtered, ads shown, and top over-served apps.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔌</div>
+      <h3>Simple REST API</h3>
+      <p>One POST request. No SDKs, no complex setup. Integrate in hours, not weeks.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔄</div>
+      <h3>Dynamic user data</h3>
+      <p>Add and update installed app records in real time as users install or uninstall apps.</p>
+    </div>
+  </div>
+</div>
+
+<div class="cta-section">
+  <h2>Try the live API right now</h2>
+  <p>No signup needed. Hit our live demo and see the filtering in action.</p>
+  <div class="url-box">https://web-production-b1e23.up.railway.app/docs</div>
+  <br>
+  <button class="btn-primary" onclick="window.open('https://web-production-b1e23.up.railway.app/docs','_blank')">Open live demo →</button>
+</div>
+
+<div class="footer">
+  Built by Sukrit Chandel · adfilter · April 2026
+</div>
+
+</body>
+</html>
