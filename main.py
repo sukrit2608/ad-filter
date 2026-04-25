@@ -22,6 +22,8 @@ filter_log_table = sqlalchemy.Table(
     sqlalchemy.Column("user_id", sqlalchemy.String),
     sqlalchemy.Column("app_package", sqlalchemy.String),
     sqlalchemy.Column("show_ad", sqlalchemy.Boolean),
+    sqlalchemy.Column("split_ratio", sqlalchemy.Integer),
+    sqlalchemy.Column("user_has_app", sqlalchemy.Boolean),
     sqlalchemy.Column("timestamp", sqlalchemy.String),
 )
 
@@ -51,28 +53,38 @@ async def shutdown():
     await database.disconnect()
 
 @app.post("/filter")
-async def filter_ad(user_id: str, app_package: str):
+async def filter_ad(user_id: str, app_package: str, split_ratio: int = 0):
     from datetime import datetime
+    import random
+
     query = installed_apps_table.select().where(
         (installed_apps_table.c.user_id == user_id) &
         (installed_apps_table.c.app_package == app_package)
     )
     result = await database.fetch_one(query)
-    show_ad = result is None
+    user_has_app = result is not None
+
+    if user_has_app:
+        random_number = random.randint(0, 100)
+        show_ad = random_number <= split_ratio
+    else:
+        show_ad = True
 
     await database.execute(
         filter_log_table.insert().values(
             user_id=user_id,
             app_package=app_package,
             show_ad=show_ad,
+            split_ratio=split_ratio,
+            user_has_app=user_has_app,
             timestamp=datetime.utcnow().isoformat()
         )
     )
 
-    if not show_ad:
-        return {"show_ad": False, "reason": "app already installed"}
+    if show_ad:
+        return {"show_ad": True, "reason": "app not installed, show the ad" if not user_has_app else "existing user within split ratio, show reminder ad"}
     else:
-        return {"show_ad": True, "reason": "app not installed, show the ad"}
+        return {"show_ad": False, "reason": "app already installed, outside split ratio"}
 
 @app.post("/add-app")
 async def add_app(user_id: str, app_package: str):
@@ -100,15 +112,29 @@ async def get_analytics():
     total_shown = await database.fetch_val(
         "SELECT COUNT(*) FROM filter_log WHERE show_ad = 1"
     )
+    reminder_ads = await database.fetch_val(
+        "SELECT COUNT(*) FROM filter_log WHERE show_ad = 1 AND user_has_app = 1"
+    )
+    new_user_ads = await database.fetch_val(
+        "SELECT COUNT(*) FROM filter_log WHERE show_ad = 1 AND user_has_app = 0"
+    )
     top_apps = await database.fetch_all(
         """SELECT app_package, COUNT(*) as count 
            FROM filter_log WHERE show_ad = 0 
            GROUP BY app_package 
            ORDER BY count DESC LIMIT 5"""
     )
+    avg_split_ratio = await database.fetch_val(
+        "SELECT AVG(split_ratio) FROM filter_log WHERE user_has_app = 1"
+    )
     return {
         "total_ads_filtered": total_filtered,
         "total_ads_shown": total_shown,
+        "breakdown": {
+            "reminder_ads_to_existing_users": reminder_ads,
+            "new_user_acquisition_ads": new_user_ads,
+        },
+        "average_split_ratio_for_existing_users": round(avg_split_ratio or 0, 1),
         "top_filtered_apps": [{"app": row["app_package"], "count": row["count"]} for row in top_apps]
     }
 from fastapi.responses import FileResponse
